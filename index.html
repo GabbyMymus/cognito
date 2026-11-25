@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interference Match Memory Task</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main id="app">
+
+  <!-- 1. Welcome + consent -->
+  <section id="screen-consent" class="screen active">
+    <h1>Interference Match</h1>
+    <p class="lead">A short memory study (about 5 minutes).</p>
+    <div class="card">
+      <h2>What you will do</h2>
+      <p>You will see small sets of <b>words</b> or <b>shapes</b> for a moment. After a short wait, sometimes with a quick side task, you will pick out the items you saw.</p>
+      <h2>Your data</h2>
+      <p>We record your age, gender, course, email and your answers. The data is used only for a class project in Cognitive Psychology and is not shared outside the group. You can stop at any time by closing this page.</p>
+      <label class="check"><input type="checkbox" id="consent-box"> I agree to take part.</label>
+      <button id="btn-consent" class="primary" disabled>Continue</button>
+    </div>
+  </section>
+
+  <!-- 2. Demographics -->
+  <section id="screen-demo" class="screen">
+    <h1>About you</h1>
+    <form id="demo-form" class="card" novalidate>
+      <label>Age <input type="number" id="age" min="10" max="99" required></label>
+      <label>Gender
+        <select id="gender" required>
+          <option value="">Select…</option>
+          <option>Female</option>
+          <option>Male</option>
+          <option>Non-binary</option>
+          <option>Prefer not to say</option>
+        </select>
+      </label>
+      <label>Course <input type="text" id="course" placeholder="e.g. BA Psychology" required></label>
+      <label>Email <input type="email" id="email" required></label>
+      <p id="demo-error" class="error" hidden>Please fill in every field (age 10 to 99, valid email).</p>
+      <button type="submit" class="primary">Continue</button>
+    </form>
+  </section>
+
+  <!-- 3. Instructions -->
+  <section id="screen-instr" class="screen">
+    <h1>How it works</h1>
+    <div class="card">
+      <ol class="steps">
+        <li>Look at the <b>+</b> in the middle.</li>
+        <li><b>5 items</b> appear (words or shapes). Try to remember all of them.</li>
+        <li>They disappear. During the wait you may get a quick side task:
+          <ul>
+            <li><b>Rhyme?</b> Do the two words rhyme? Press <kbd>F</kbd> = yes, <kbd>J</kbd> = no (or tap the buttons).</li>
+            <li><b>Same shape?</b> Is the right shape the same as the left one, just turned? Press <kbd>F</kbd> = same, <kbd>J</kbd> = different (mirror image).</li>
+            <li>Sometimes there is no side task. Just wait.</li>
+          </ul>
+          Answer the side task quickly and accurately.
+        </li>
+        <li>Then you see 10 items. <b>Click the 5 you saw</b>, then press <b>Done</b>.</li>
+      </ol>
+      <p>First you get 2 practice rounds with feedback.</p>
+      <button id="btn-start-practice" class="primary">Start practice</button>
+    </div>
+  </section>
+
+  <!-- 4. Between practice and main -->
+  <section id="screen-ready" class="screen">
+    <h1>Practice done</h1>
+    <div class="card">
+      <p>Now the real task: 24 rounds, about 4 minutes. There is no feedback from now on.</p>
+      <button id="btn-start-main" class="primary">Start</button>
+    </div>
+  </section>
+
+  <!-- 5. Trial stage -->
+  <section id="screen-trial" class="screen">
+    <div id="progress"><div id="progress-bar"></div></div>
+    <div id="stage"></div>
+  </section>
+
+  <!-- 6. End -->
+  <section id="screen-end" class="screen">
+    <h1>Thank you!</h1>
+    <div class="card">
+      <p>Your answers have been saved on this device.</p>
+      <p id="end-score"></p>
+      <button id="btn-next" class="primary">Next participant</button>
+      <p class="small"><a href="#" id="btn-own-data">Download my data (backup)</a></p>
+    </div>
+  </section>
+
+  <footer><a href="researcher.html">Researcher page</a></footer>
+</main>
+
+<script src="js/stimuli.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/task.js"></script>
+</body>
+</html>

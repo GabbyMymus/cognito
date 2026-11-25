@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Researcher Data Page</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main id="app">
+  <h1>Researcher page</h1>
+  <p class="lead">Data saved on this device. <a href="index.html">Back to the task</a></p>
+
+  <div class="card">
+    <h2 id="count">Participants</h2>
+    <label class="check"><input type="checkbox" id="inc-test"> Include test-mode and unfinished sessions in downloads</label>
+    <div class="btn-row">
+      <button class="primary" id="dl-xlsx">Download Excel (.xlsx)</button>
+      <button id="dl-trials">Trials CSV</button>
+      <button id="dl-parts">Participants CSV</button>
+    </div>
+    <div class="btn-row">
+      <button id="dl-json">Backup (.json)</button>
+      <label class="small" style="margin:0;align-self:center">Merge a backup from another device:
+        <input type="file" id="imp-json" accept=".json" style="display:inline;width:auto;border:0;padding:0 0 0 6px;background:none"></label>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Mean score by condition (included sessions)</h2>
+    <p class="small">Score = hits − false alarms, from −5 to 5.</p>
+    <div class="table-wrap"><table id="cond-table"></table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Sessions</h2>
+    <div class="table-wrap"><table id="part-table"></table></div>
+    <div class="btn-row" style="margin-top:20px">
+      <button class="danger" id="clear">Delete all data on this device</button>
+    </div>
+  </div>
+</main>
+
+<script src="lib/xlsx.full.min.js"></script>
+<script src="js/storage.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const included = () => DB.all().filter(p => $('inc-test').checked || (p.completed && !p.test_mode));
+  const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const CODEBOOK = [
+    ['participant_id', 'Code given to each person on this device'],
+    ['age, gender, course, email', 'Filled in by the participant'],
+    ['completed', 'yes = finished all 24 trials'],
+    ['test_mode', 'yes = fast dry-run session (?test=1); exclude from analysis'],
+    ['trial', 'Trial number 1-24 in the order shown (order is random per person)'],
+    ['stimulus_type', 'words or shapes (the 5 items to remember)'],
+    ['exposure_ms', 'How long the 5 items were on screen: 1000 or 2000 ms'],
+    ['delay_ms', 'Retention interval between study and recall: 2000 or 6000 ms'],
+    ['interference', 'What filled the delay: none, verbal (rhyme judgements) or visual (rotated shape judgements)'],
+    ['interference_match', 'matched = same kind as the items (words+verbal, shapes+visual); mismatched; none'],
+    ['targets / lures / selected', 'Items shown / new items in the grid / items the person clicked (shapes are S + seed number)'],
+    ['hits', 'Studied items correctly clicked (0-5)'],
+    ['false_alarms', 'New items wrongly clicked (0-5)'],
+    ['score', 'hits - false_alarms (-5 to 5). Main memory measure'],
+    ['accuracy', '(hits + correct rejections) / 10'],
+    ['recall_rt_ms', 'Time from grid appearing to pressing Done'],
+    ['distractor_items / _correct / _accuracy / _mean_rt_ms', 'Side-task performance during the delay (blank for no interference)'],
+    ['score_* (Participants sheet)', 'Each person\'s mean score in that condition, for paired t-tests']
+  ];
+
+  function render() {
+    const all = DB.all();
+    const inc = included();
+    $('count').textContent = `${all.length} session(s) saved · ${all.filter(p => p.completed && !p.test_mode).length} complete real participant(s)`;
+    const prow = DB.participantRows(all);
+    $('part-table').innerHTML = '<tr><th>ID</th><th>Age</th><th>Gender</th><th>Course</th><th>Done</th><th>Test</th><th>Trials</th><th>Mean score</th></tr>' +
+      prow.map(r => `<tr><td>${esc(r.participant_id)}</td><td>${esc(r.age)}</td><td>${esc(r.gender)}</td><td>${esc(r.course)}</td><td>${r.completed}</td><td>${r.test_mode}</td><td>${r.n_trials}</td><td>${r.mean_score}</td></tr>`).join('');
+
+    const rows = DB.trialRows(inc);
+    const mean = a => a.length ? (a.reduce((s, x) => s + x, 0) / a.length).toFixed(2) : '–';
+    const groups = [
+      ['Stimulus', 'stimulus_type', ['words', 'shapes']],
+      ['Exposure', 'exposure_ms', [1000, 2000]],
+      ['Delay', 'delay_ms', [2000, 6000]],
+      ['Interference', 'interference', ['none', 'verbal', 'visual']],
+      ['Match', 'interference_match', ['none', 'matched', 'mismatched']]
+    ];
+    $('cond-table').innerHTML = '<tr><th>Factor</th><th>Level</th><th>Trials</th><th>Mean score</th></tr>' +
+      groups.map(([name, key, levels]) => levels.map(l => {
+        const s = rows.filter(r => r[key] === l).map(r => r.score);
+        return `<tr><td>${name}</td><td>${l}</td><td>${s.length}</td><td>${mean(s)}</td></tr>`;
+      }).join('')).join('');
+  }
+
+  $('inc-test').addEventListener('change', render);
+  $('dl-trials').addEventListener('click', () => DB.download(`trials_${stamp()}.csv`, DB.csv(DB.trialRows(included()))));
+  $('dl-parts').addEventListener('click', () => DB.download(`participants_${stamp()}.csv`, DB.csv(DB.participantRows(included()))));
+  $('dl-xlsx').addEventListener('click', () => {
+    if (!window.XLSX) { alert('Excel library did not load. Use the CSV buttons instead (they open in Excel).'); return; }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.trialRows(included())), 'Trials');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.participantRows(included())), 'Participants');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Column', 'Meaning']].concat(CODEBOOK)), 'Codebook');
+    XLSX.writeFile(wb, `interference_match_data_${stamp()}.xlsx`);
+  });
+  $('dl-json').addEventListener('click', () =>
+    DB.download(`backup_${stamp()}.json`, JSON.stringify(DB.all(), null, 1), 'application/json'));
+  $('imp-json').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const n = DB.merge(JSON.parse(await f.text())); alert(`Added ${n} new session(s).`); render(); }
+    catch (err) { alert('That file is not a valid backup: ' + err.message); }
+    e.target.value = '';
+  });
+  $('clear').addEventListener('click', () => {
+    if (!confirm('Delete ALL saved sessions on this device? Download a backup first.')) return;
+    if (prompt('Type DELETE to confirm') !== 'DELETE') return;
+    DB.clear(); render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

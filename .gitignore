@@ -1,0 +1,7 @@
+# Participant data contains emails: never commit it
+*.xlsx
+*.csv
+*.json
+analysis/results/
+.DS_Store
+__pycache__/
